@@ -42,7 +42,7 @@ func (q *Queue) Enqueue(item string) {
 	defer q.cond.L.Unlock()
 
 	q.queue = append(q.queue, item)
-	fmt.Printf("putting #{item} to queue  notify all \n")
+	fmt.Printf("putting %s to queue  notify all \n", item)
 	q.cond.Broadcast()
 }
 

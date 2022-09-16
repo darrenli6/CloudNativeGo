@@ -30,7 +30,9 @@ func main() {
 
 	// producer
 	for i := 0; i < 10; i++ {
+		fmt.Printf("put data  %d \n", i)
 		message <- i
+
 	}
 
 	time.Sleep(5 * time.Second)
