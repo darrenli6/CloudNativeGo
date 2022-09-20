@@ -1,0 +1,283 @@
+
+# 15. Kubernetes存储
+
+## 15.1 EmptyDir
+
+### Lab47. 创建一个使用EmptyDir的Pod
+```yaml
+kubectl apply -f- <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: em
+spec:
+  containers:
+  - image: ubuntu
+    name: test-container
+    # 下 3 行
+    volumeMounts:
+    - mountPath: /cache
+      name: cache-volume
+    args:
+    - /bin/sh
+    - -c
+    - sleep 30000
+# 下 3 行
+  volumes:
+  - name: cache-volume
+    emptyDir: {}
+EOF
+
+```
+
+```bash
+$ kubectl describe pod em | grep -A 1 Mount
+    Mounts:
+     `/cache`from `cache-volume` (rw)
+
+$ kubectl describe pod em | grep -A 4 ^Volume
+Volumes:
+  `cache-volume`:
+    Type:       `EmptyDir` (a temporary directory that shares a pod's lifetime)
+    Medium:
+    SizeLimit:  `<unset>`
+```
+
+```bash
+$ kubectl exec -it em -- /bin/sh
+# ls /cache
+# touch /cache/my.txt
+# exit
+```
+
+### Lab48. EmptyDir容量限制
+
+```yaml
+kubectl apply -f- <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: em1
+spec:
+  containers:
+  - image: ubuntu
+    name: test-container
+    volumeMounts:
+    - mountPath: /cache
+      name: cache-volume
+    args:
+    - /bin/sh
+    - -c
+    - sleep 30000
+  volumes:
+  - name: cache-volume
+  # 下 2 行区别
+    emptyDir:
+      sizeLimit: 1Gi
+EOF
+
+```
+
+```bash
+$ kubectl describe pod em1 | grep -A 4 ^Volume
+Volumes:
+  cache-volume:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:
+    SizeLimit: `1Gi`
+```
+
+```bash
+$ kubectl exec -it em1 -- /bin/sh
+# df -h
+Filesystem                         Size  Used Avail Use% Mounted on
+overlay                             38G  4.5G   32G  13% /
+/dev/mapper/ubuntu--vg-ubuntu--lv  `38G` 4.5G   32G  13% /cache
+shm                                 64M     ...
+# dd if=/dev/zero of=/cache/test2g bs=1M count=2048
+# exit
+```
+
+```bash
+$ kubectl get pod em1
+NAME   READY   STATUS    RESTARTS   AGE
+em1    0/1    `Evicted`  1          53m
+```
+
+## 15.2 hostPath
+
+### Lab49. hostPath
+
+```bash
+$ kubectl -n kube-system get pod kube-proxy-8pv56 -o yaml | grep -A 12 volumes:
+  volumes:
+  ...输出省略...
+  - hostPath:
+      path: /run/xtables.lock
+      type: FileOrCreate
+    name: xtables-lock
+  - hostPath:
+      path: /lib/modules
+      type: ""
+    name: lib-modules
+```
+
+```yaml
+kubectl apply -f- <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hppod
+spec:
+  containers:
+  - image: ubuntu
+    name: hp-container
+    volumeMounts:
+    - mountPath: /hp-dir
+      name: hp-volume
+    args:
+    - /bin/sh
+    - -c
+    - sleep 30000
+  volumes:
+  - name: hp-volume
+    hostPath:
+      path: /mnt/hostpathdir
+      type: DirectoryOrCreate
+EOF
+
+```
+
+```bash
+$ kubectl get pod hppod -o wide
+NAME    READY   STATUS    RESTARTS   AGE   IP             NODE          NOMINATED NODE   READINESS GATES
+hppod   1/1     Running   0          29s   172.16.126.9  `k8s-worker2`  <none>           <none>
+
+$ ssh root@k8s-worker2 ls /mnt
+hostpathdir
+```
+
+## 15.3 PV和PVC
+
+### Lab50. PV和PVC
+
+**[kiosk@192.168.147.128]$**
+
+```bash
+sudo apt -y install nfs-kernel-server && \
+sudo mkdir /nfs
+echo '/nfs *(rw,no_root_squash)' | sudo tee /etc/exports
+sudo systemctl enable nfs-server
+sudo systemctl restart nfs-server
+showmount -e
+
+```
+
+```yaml
+kubectl apply -f- <<EOF
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mypv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+  nfs:
+    path: /nfs
+    server: 192.168.147.128
+EOF
+
+```
+
+```bash
+$ kubectl get pv
+NAME   CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM   STORAGECLASS   REASON   AGE
+mypv   1Gi        RWO            Recycle          Available                                   9s
+```
+
+```yaml
+kubectl apply -f- <<EOF
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mypvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeName: mypv
+  resources:
+    requests:
+      storage: 1Gi
+EOF
+
+```
+
+```bash
+$ kubectl get pvc
+NAME    STATUS   VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+mypvc   Bound    mypv     1Gi        RWO                           7s
+```
+
+```bash
+$ kubectl delete pvc mypvc && kubectl get pod
+persistentvolumeclaim "mypvc" deleted
+NAME                               READY   STATUS                   RESTARTS       AGE
+...输出省略...
+`recycler-for-mypv`                0/1     ContainerCreating        0              0s
+```
+
+```yaml
+kubectl apply -f- <<EOF
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mypv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+# 只修改 1 行
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    path: /nfs
+    server: 192.168.147.128
+EOF
+
+```
+
+```bash
+$ kubectl get pv
+NAME   CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM   STORAGECLASS   REASON   AGE
+mypv   1Gi        RWO           `Retain`          Available
+```
+
+```yaml
+kubectl apply -f- <<EOF
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mypvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeName: mypv
+  resources:
+    requests:
+      storage: 1Gi
+EOF
+
+```
+
+```bash
+$ kubectl delete pvc mypvc
+persistentvolumeclaim "mypvc" deleted
+
+$ kubectl get pv
+NAME   CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS     CLAIM           STORAGECLASS   REASON   AGE
+mypv   1Gi        RWO            Retain          `Released`  default/mypvc                           5m46s
+```
+
