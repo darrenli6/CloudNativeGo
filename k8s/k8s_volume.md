@@ -243,8 +243,8 @@ spec:
 # 只修改 1 行
   persistentVolumeReclaimPolicy: Retain
   nfs:
-    path: /nfs
-    server: 192.168.147.128
+    path: /root/nfs_data
+    server: 192.168.10.95
 EOF
 
 ```
