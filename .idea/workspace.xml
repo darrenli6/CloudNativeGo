@@ -1,13 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="e7b3c9a6-2be3-4716-b192-7e569e791c9d" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/Sync/condition/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/Sync/condition/main.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Sync/mutex/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/Sync/mutex/main.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Sync/waitgroup/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/Sync/waitgroup/main.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/k8s/21Helm包管理工具.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/k8s/k8s_volume.md" beforeDir="false" afterPath="$PROJECT_DIR$/k8s/k8s_volume.md" afterDir="false" />
-    </list>
+    <list default="true" id="e7b3c9a6-2be3-4716-b192-7e569e791c9d" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -62,6 +56,7 @@
       <updated>1664017444974</updated>
       <workItem from="1664017454603" duration="112000" />
       <workItem from="1664017715730" duration="78000" />
+      <workItem from="1664156389268" duration="57000" />
     </task>
     <servers />
   </component>
