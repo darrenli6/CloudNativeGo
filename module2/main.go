@@ -23,10 +23,11 @@ func healthz(w http.ResponseWriter, r *http.Request) {
 
 func myHandler(w http.ResponseWriter, r *http.Request) {
 
-	fmt.Println("enter myHandler ")
+	log.Println("enter myHandler ")
 
 	// 获取环境变量
-	fmt.Println("读取VERSION环境变量:", os.Getenv("VERSION"))
+
+	log.Println("读取VERSION环境变量:", os.Getenv("VERSION"))
 	w.Header().Add("VERSION", fmt.Sprintf("%s", os.Getenv("VERSION")))
 	ip := r.Header.Get("X-Real-IP")
 	log.Printf("客户端ip:%s\n", ip)
