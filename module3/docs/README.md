@@ -50,7 +50,7 @@ docker 采用veth的方式
  
 每个进程都有独立的用户管理系统
 
-## 实践
+## Namespace 实践
 
 - 查看当前的namespace 
 
@@ -101,4 +101,83 @@ root@k8s-master:/proc/18881/ns# nsenter -t 18881 -n ip addr
     inet 192.168.235.196/32 scope global eth0
        valid_lft forever preferred_lft forever
 ```
+
+
+在新network namespace 执行sleep命令
+
+```
+root@k8s-master:/proc/18881/ns# unshare -fn sleep 600
+```
+
+
+```
+root@k8s-master:~# ps -ef | grep sleep 
+root       34436    1071  0 21:47 pts/0    00:00:00 unshare -fn sleep 600
+root       34437   34436  0 21:47 pts/0    00:00:00 sleep 600
+root       34446   31348  0 21:47 pts/1    00:00:00 grep --color=auto sleep
+root@k8s-master:~# nsenter -t 1071 -n ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+```
+
+
+## Cgroup 
+
+- 对一组进程进行资源控制和监控的机制 
+- 可以对CPU使用时间，内存，磁盘进行限制 
+  
+## Linux内核中Cgroup的实现
+
+## 可配量/可度量- Control Groups
+
+![image](./imgs/cgroup1.png)
+
+cgroup 实现了对资源的配额和度量
+
+- blkio 每个设备的输入和输出
+- cpu  分配时间片 
+- cpuacct 生产cgroup任务的cpu资源报告
+- cpuset 
+- devices 允许或拒绝cgroup对设备的访问
+- memory 
+
+## CPU子系统 
+
+- cpu.shares 可以获得CPU使用时间的相对值
+进程之间按照cpu的相对值分配
+
+- cpu.cfs_period_us  cfs_period_us 用来配置时间周期长度 单位微秒，绝对值
+   
+- cpu.cfs_quota_us  最多使用cpu时间数
+
+
+```
+root@k8s-master:/proc/18881/ns#  cd /sys/fs/cgroup/
+root@k8s-master:/sys/fs/cgroup# ls
+blkio  cpu  cpuacct  cpu,cpuacct  cpuset  devices  freezer  hugetlb  memory  net_cls  net_cls,net_prio  net_prio  perf_event  pids  rdma  systemd  unified
+root@k8s-master:/sys/fs/cgroup# cd cpu
+root@k8s-master:/sys/fs/cgroup/cpu# ls
+aegis                  cgroup.procs          cpuacct.usage         cpuacct.usage_percpu_sys   cpuacct.usage_user  cpu.shares  kubepods.slice     system.slice
+assist                 cgroup.sane_behavior  cpuacct.usage_all     cpuacct.usage_percpu_user  cpu.cfs_period_us   cpu.stat    notify_on_release  tasks
+cgroup.clone_children  cpuacct.stat          cpuacct.usage_percpu  cpuacct.usage_sys          cpu.cfs_quota_us    init.scope  release_agent      user.slice
+```
+
+
+
+
+## Linux调度 
+
+CFS（Completely Fair Scheduler）调度器 cfs_sched_class 完全公平调度器,引入虚拟时间概念。
+
+## Vruntime红黑树 
+
+
+## CFS进程调度
+
+
+
 
