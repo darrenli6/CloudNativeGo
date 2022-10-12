@@ -179,5 +179,144 @@ CFS（Completely Fair Scheduler）调度器 cfs_sched_class 完全公平调度�
 ## CFS进程调度
 
 
+## 实验(利用cgroup压制一个程序的资源)
+
+占用两个cpu的程序 
+
+```
+func main() {
+	go func() {
+
+		for {
+
+		}
+	}()
+
+	for {
+
+	}
+}
+```
 
 
+运行二进制程序
+
+查看top 
+
+```
+Tasks: 201 total,   2 running, 199 sleeping,   0 stopped,   0 zombie
+%Cpu(s): 92.5 us,  7.1 sy,  0.0 ni,  0.2 id,  0.0 wa,  0.0 hi,  0.2 si,  0.0 st
+MiB Mem :   3744.5 total,    130.7 free,   1154.1 used,   2459.7 buff/cache
+MiB Swap:      0.0 total,      0.0 free,      0.0 used.   2334.1 avail Mem 
+
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND                                                                                                                                    
+  98460 root      20   0  702360    936    648 R 160.9   0.0   0:21.80 busyloop                                                                                                                                   
+   2650 root      20   0 1382044 450380  77508 S  10.3  11.7   6:38.19 kube-apiserver                                                                                                                             
+   3033 root      20   0 1990424 152680  80224 S   4.0   4.0   3:32.38 kubelet                                                                                                                                    
+    825 root      10 -10  123688  32352  16364 S   3.6   0.8   3:33.82 AliYunDun                                                                                                                                  
+   5666 root      20   0  822712 114604  67468 S   3.0   3.0   1:29.14 kube-controller                                                                                                                            
+   2724 root      20   0   10.7g  72624  27912 S   2.3   1.9   2:04.92 etcd                                                                                                                                       
+    780 root      20   0 1950456 102396  51888 S   2.0   2.7   2:11.54 dockerd                                                                                                                                    
+  18287 root      20   0 1672016  56540  42216 S   0.7   1.5   1:12.14 calico-node                                                                                                                                
+  98563 root      20   0   12108   4120   3444 R   0.7   0.1   0:00.03 top                                                                                                                                        
+      1 root      20   0  105292  12716   8468 S   0.3   0.3   0:15.35 systemd                                                                                                                                    
+     10 root      20   0       0      0      0 S   0.3   0.0   0:01.25 ksoftirqd/0                                                                                                                                
+    500 root      20   0 1124136  61084  29964 S   0.3   1.6   0:29.42 containerd                                                                                                                                 
+    795 root      20   0   22620   5956   5228 S   0.3   0.2   0:04.61 AliYunDunUpdate                                                                                                                            
+   1047 root      20   0   19272   9720   8004 S   0.3   0.3   0:12.35 systemd                                                                                                                                    
+   4075 1001      20   0 1356776  69952  41260 S   0.3   1.8   0:27.76 operator                                                                                                                                   
+   5656 root      20   0  754020  53184  37124 S   0.3   1.4   0:15.93 kube-scheduler                                                                                                                             
+  18380 root      20   0  751496  44748  34372 S   0.3   1.2   0:06.89 coredns                                                                                                                                    
+  18468 root      20   0  751240  43820  33684 S   0.3   1.1   0:07.02 coredns                                                                                                                                    
+  21459 root      20   0 1503680  66636  41352 S   0.3   1.7   0:14.50 apiserver 
+```
+
+
+echo  <pid>  > croup.procs
+
+
+```
+root@k8s-master:/sys/fs/cgroup/cpu/cpudemo# cat cpu.shares 
+1024
+root@k8s-master:/sys/fs/cgroup/cpu/cpudemo# cat cpu.cfs_period_us 
+100000
+root@k8s-master:/sys/fs/cgroup/cpu/cpudemo# cat cpu.cfs_quota_us 
+-1
+# 查看到程序的pid 
+root@k8s-master:/sys/fs/cgroup/cpu/cpudemo# echo 101089 >cgroup.procs 
+root@k8s-master:/sys/fs/cgroup/cpu/cpudemo# cat cgroup.procs 
+101089
+ 
+root@k8s-master:/sys/fs/cgroup/cpu/cpudemo# cat cpu.cfs_quota_us 
+-1
+# 可以占用cpu的100%
+root@k8s-master:/sys/fs/cgroup/cpu/cpudemo# echo 100000 > cpu.cfs_quota_us
+root@k8s-master:/sys/fs/cgroup/cpu/cpudemo# cat cpu.cfs_quota_us 
+100000
+
+# cgroup 可以占用cpu的10%
+root@k8s-master:/sys/fs/cgroup/cpu/cpudemo# echo 10000  > cpu.cfs_quota_us
+```
+
+## memory的子系统
+
+memory.limit_in_bytes
+
+## Cgroup driver
+
+
+## memory子系统练习
+
+ 
+ ```
+ root@k8s-master:/sys/fs/cgroup/memory# mkdir memorydemo
+root@k8s-master:/sys/fs/cgroup/memory# cd memorydemo/
+root@k8s-master:/sys/fs/cgroup/memory/memorydemo# ls
+cgroup.clone_children  memory.force_empty              memory.kmem.slabinfo                memory.kmem.tcp.usage_in_bytes  memory.move_charge_at_immigrate  memory.soft_limit_in_bytes  memory.use_hierarchy
+cgroup.event_control   memory.kmem.failcnt             memory.kmem.tcp.failcnt             memory.kmem.usage_in_bytes      memory.numa_stat                 memory.stat                 notify_on_release
+cgroup.procs           memory.kmem.limit_in_bytes      memory.kmem.tcp.limit_in_bytes      memory.limit_in_bytes           memory.oom_control               memory.swappiness           tasks
+memory.failcnt         memory.kmem.max_usage_in_bytes  memory.kmem.tcp.max_usage_in_bytes  memory.max_usage_in_bytes       memory.pressure_level            memory.usage_in_bytes
+
+top 观察程序的运行的情况
+root@k8s-master:/sys/fs/cgroup/memory/memorydemo# echo  113367 > cgroup.procs 
+root@k8s-master:/sys/fs/cgroup/memory/memorydemo# cat cgroup.procs 
+113367
+ 
+root@k8s-master:/sys/fs/cgroup/memory/memorydemo# cat  memory.limit_in_bytes     
+9223372036854771712
+root@k8s-master:/sys/fs/cgroup/memory/memorydemo# cat cgroup.procs ^C
+root@k8s-master:/sys/fs/cgroup/memory/memorydemo# echo 10000000 >   memory.limit_in_bytes
+
+ 
+ ```
+
+
+# Docker核心技术 二 
+
+## Union FS
+
+- 将不同的目录挂载到同一个虚拟文件系统下的文件系统
+- 支持为每一个成员目录设定readonly readWrite 和 whiteout-able权限 
+
+
+
+
+## 容器 
+
+![image](./imgs/docker1.png)
+
+通过Dockerfile 定义面向应用的构建代码。
+EntryPoint 定义命令 
+
+pull ubuntu 构建一层 
+每个指令构建一个容器层 。
+
+
+## Docker文件系统
+典型的linux文件 ：
+- Bootfs:  boot file system
+  - Bootloader 引导加载kernel 
+  - kernel 当kernel加载到内存中的时候，unmount bootfs 
+- Rootfs:
+  - /dev /proc /etc 标准文件
+  - 对于不同的linux版本，bootfs基本一致，Rootfs有差异
