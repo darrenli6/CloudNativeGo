@@ -320,3 +320,140 @@ pull ubuntu 构建一层
 - Rootfs:
   - /dev /proc /etc 标准文件
   - 对于不同的linux版本，bootfs基本一致，Rootfs有差异
+
+## Docker启动
+
+Linux启动：
+  在启动后，对rootfs 设置为readonly 进行一系列检查 然后将其设置为 writeonly ,供用户使用。
+Docker启动:
+   初始化的时候，将以readonly进行加载检查，接下来利用union mount将readwrite 的文件挂载到readonly的rootfs上。
+   并且将设置为readonly设置为下层fs,并向上叠加   
+
+
+![image](./imgs/docker2.png) 
+
+
+## 写操作
+
+由于镜像是有共享的特性
+
+- 写时复制
+  
+  copy on write 
+
+- 用时分配
+
+
+## 容器存储驱动
+
+![image](./imgs/docker3.png) 
+
+OverlayFs
+
+
+## 以OverlayFS为例
+
+OverLayFs分为两层 Upper 层和 Lower层,lower是镜像层，upper是容器可写层 
+
+![image](./imgs/docker4.png) 
+
+
+## overlayFs实验 
+
+```
+root@k8s-node1:~# mkdir overlay
+root@k8s-node1:~# cd overlay/
+root@k8s-node1:~/overlay# mkdir upper lower merged work
+root@k8s-node1:~/overlay# echo "from lower" > lower/in_lower.txt
+root@k8s-node1:~/overlay# echo "from upper" > upper/in_upper.txt
+root@k8s-node1:~/overlay# echo "from lower" > lower/in_both.txt
+root@k8s-node1:~/overlay# echo "from upper" > upper/in_both.txt
+root@k8s-node1:~/overlay# tree .
+.
+├── lower
+│   ├── in_both.txt
+│   └── in_lower.txt
+├── merged
+├── upper
+│   ├── in_both.txt
+│   └── in_upper.txt
+└── work
+
+4 directories, 4 files
+root@k8s-node1:~/overlay# sudo mount -t overlay overlay -o lowerdir=`pwd`/lower,upperdir=`pwd`/upper,workdir=`pwd`/work `pwd`/merged
+root@k8s-node1:~/overlay# cat merged/in_both.txt
+from upper
+root@k8s-node1:~/overlay# cat merged/in_lower.txt
+from lower
+root@k8s-node1:~/overlay# cat merged/in_upper.txt
+from upper
+
+```
+
+上层将下层覆盖 
+
+
+
+## OCI 容器标准
+
+- 镜像标准  如何打包
+- 运行时标准
+- 分发标准 
+
+## docker引擎
+
+![image](./imgs/docker5.png)
+
+containerd shim进程 runc 底层运行时的接口
+
+# 容器网络
+
+- null 模式
+  什么都不配置网络，希望用户自己自定义
+  k8s常常用自己的网络创建的
+
+- Host
+  复用主机网络
+
+- Container 
+
+重用其他容器的 
+
+- Bridge(--net=bridge)
+
+使用linux网桥和iptables提供容器互联 ，docker在主机上创建一个docker0的网桥。通过veth pair连接该主机的endpoint 
+
+- 跨主机的容器
+ 
+
+  - OverLay
+
+  网络封包实现
+
+  - remote 
+  
+
+## 网桥和NAT
+
+
+![image](./imgs/docker6.png)
+
+
+## underlay 
+
+用来做跨主机模式 
+
+
+## OverLay
+
+VXLan
+
+![image](./imgs/docker7.png)
+
+封包 路由 解包的过程
+
+
+## 网络插件Flannel 
+
+每台主机都有flanneld的设备 。
+
