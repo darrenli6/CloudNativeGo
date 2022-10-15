@@ -267,3 +267,35 @@ Paas相关性最大
 
 
 
+# 核心对象概览
+
+## deployment 与statefulset 差异
+
+- 身份标识
+
+statefulset controller 为每个pod编号，编号从0开始
+
+- 数据存储
+
+statefulset允许用户定义volumeClaimTemplates
+
+- statefulset 升级策略不一样
+
+   - ondelete 
+   - 滚动策略
+   - 分片升级
+
+## CRD custom resource definition
+
+ CRD就像数据库的开放式表结构，允许用户自定义schema
+ 拓展的产品是 Istio Knative 
+
+ CAlico CRD对象 
+
+
+ 
+
+
+
+
+

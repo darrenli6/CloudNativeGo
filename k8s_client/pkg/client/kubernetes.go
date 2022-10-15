@@ -17,7 +17,7 @@ var onceClient sync.Once
 var onceConfig sync.Once
 
 var KubeConfig *rest.Config
-var kubeClientSet *kubernetes.Clientset
+var KubeClientSet *kubernetes.Clientset
 
 func GetK8SClientSet() (*kubernetes.Clientset, error) {
 
@@ -26,20 +26,21 @@ func GetK8SClientSet() (*kubernetes.Clientset, error) {
 		if err != nil {
 			return
 		}
-		kubeClientSet, err = kubernetes.NewForConfig(config)
+		KubeClientSet, err = kubernetes.NewForConfig(config)
 		if err != nil {
 			klog.Fatal(err)
 			return
 		}
 	})
 
-	return kubeClientSet, nil
+	return KubeClientSet, nil
 }
 
-func GetRestConfig() (KubeConfig *rest.Config, err error) {
+func GetRestConfig() (*rest.Config, error) {
 
 	onceConfig.Do(func() {
 		var kubeConfig *string
+		var err error
 
 		if home := homedir.HomeDir(); home != "" {
 			kubeConfig = flag.String("kubeConfig", filepath.Join(home, ".kube", "config"), "absolute path to the kubeconfig file ")
@@ -59,6 +60,6 @@ func GetRestConfig() (KubeConfig *rest.Config, err error) {
 		return
 	})
 
-	return
+	return KubeConfig, nil
 
 }

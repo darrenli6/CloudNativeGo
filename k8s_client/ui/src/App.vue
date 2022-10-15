@@ -13,7 +13,7 @@ export default {
   name: 'WebShell',
   data() {
     return {
-      socketURI: 'ws://127.0.0.1:10000/namespace/kube-system/pod/kube-proxy-dw4ww/container/kube-proxy?method=sh'
+      socketURI: 'ws://127.0.0.1:10000/namespace/kube-system/pod/kube-proxy-bf25z/container/kube-proxy?method=sh'
     }
   },
   mounted() {
