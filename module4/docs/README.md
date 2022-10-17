@@ -261,6 +261,11 @@ Paas相关性最大
 ### finalizer 
 资源锁
 
+namespace中用
+
+子对象删除，然后删除namespace 
+
+
 ### ResouceVersion 
 
 乐观锁
