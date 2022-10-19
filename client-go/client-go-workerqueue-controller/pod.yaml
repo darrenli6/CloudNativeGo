@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-aaa
+  labels:
+    name: myapp
+spec:
+  containers:
+  - name: local-dns
+    image: busybox:1.28.4
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "sleep 60m"
+  
