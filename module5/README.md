@@ -10,3 +10,5 @@ kubectl apply -f svc.yaml -n etcd
 
 ```
 
+
+kubectl logs etcd-0 -n etcd 
