@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: main-ing-svc
+spec:
+  ports:
+  - port: 8083
+  # 因为service通过port 80端口接受，打到targetPort端口 这个targetPort与deployment一致
+    targetPort: 8083
+    protocol: TCP
+  selector:
+      # 这里要筛选deployement 所以与上面deployment的标签一致
+    app: main

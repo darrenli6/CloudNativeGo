@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: main-deployment
+  labels:
+    app: main
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: main
+  template:
+    metadata:
+      labels:
+        app: main
+    spec:
+      containers:
+      - name: main
+        image: httpserver:v1
+        volumeMounts:
+        - mountPath: /data/logs/
+          name: log-volume
+        ports:
+        - containerPort: 8083
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8083
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        env:
+          - name: GOPORT
+            value: "8083"
+          - name: GOAPPPATH
+            value: "/data/logs/"  
+      volumes:
+        - name: log-volume
+          hostPath:
+            path: /Users/darren/go/src/github.com/darrenli6/CloudNativeGo/module8/code/log/
+            type: Directory

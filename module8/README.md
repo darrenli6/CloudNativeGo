@@ -12,5 +12,31 @@
 配置和代码分离
 
 
+
+
+
+
 # 完成过程
+
+`cd code`
+
+##  编译go程序
+
+`make build`
+
+
+## 制作镜像
+
+`make image`
+
+httpserver:v1
+
+## 运行docker
+
+`make rundocker`
+
+杀死docker容器
+
+`make killdocker`
+
 
