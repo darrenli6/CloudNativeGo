@@ -3,6 +3,7 @@ kind: Service
 metadata:
   name: main-ing-svc
 spec:
+  type: NodePort
   ports:
   - port: 8083
   # 因为service通过port 80端口接受，打到targetPort端口 这个targetPort与deployment一致
