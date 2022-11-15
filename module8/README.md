@@ -118,3 +118,35 @@ main-ing-svc       NodePort    10.107.193.1    <none>        8083:30993/TCP   11
 ```
 
 宿主机访问 ：http://127.0.0.1:30993/healthz
+
+
+## 创建ingress
+
+```
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: main-ingress-test
+  annotations:
+    kubernetes.io/ingress.class: "nginx"   
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - http:
+      paths:       
+      - path: /hello
+        pathType: Prefix
+        backend:
+          service:
+          #这里是service的信息
+            name: main-ing-svc
+            port:
+              number: 8083
+```
+
+```
+darren@darrendeMacBook-Pro k8s_code % kubectl get ingress -owide
+NAME                CLASS    HOSTS   ADDRESS   PORTS   AGE
+main-ingress-test   <none>   *                 80      14s
+```
+
