@@ -9,7 +9,7 @@
 echo sh -c "echo 'hello from k8s storage'" > /Users/darren/Documents/project/k8spath/csi/index.html
 
 
-kubectl create module7 
+kubectl create ns module7 
 
 darren@darrendeMacBook-Pro csi % kubectl apply -f pv.yaml -n module7
 persistentvolume/task-pv-volume created
@@ -22,4 +22,6 @@ darren@darrendeMacBook-Pro csi % kubectl apply -f svc.yaml -n module7
 
 
 ```
+
+
 
