@@ -2,4 +2,6 @@
  
  .DS_Store
 
- module8/code/log/151515_log.txt
+ module8/code/log/*.txt
+
+

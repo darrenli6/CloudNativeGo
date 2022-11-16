@@ -62,6 +62,14 @@ spec:
       containers:
       - name: main
         image: httpserver:v1
+        # 限制资源
+        resources:
+          requests:
+            memory: 528974848
+            cpu: "500m"
+          limits:
+            memory: 1028974848
+            cpu: "1000m"
         volumeMounts:
         - mountPath: /data/logs/
           name: log-volume
