@@ -1,4 +1,4 @@
-module github.com/darrenli6/client-go-demo/04
+module github.com/darrenli6/CloudNativeGo/client-go/11
 
 go 1.19
 
