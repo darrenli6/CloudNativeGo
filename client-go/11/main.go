@@ -35,6 +35,7 @@ func main() {
 	if err != nil {
 		log.Fatalln("can not create client ")
 	}
+
 	factory := informers.NewSharedInformerFactory(clientset, 0)
 	serviceInformer := factory.Core().V1().Services()
 	ingressInformer := factory.Networking().V1().Ingresses()
@@ -43,8 +44,9 @@ func main() {
 
 	stopCh := make(chan struct{})
 	factory.Start(stopCh)
+	// 等待同步数据到本地之后
 	factory.WaitForCacheSync(stopCh)
-
+	// 同步之后再run
 	controller.Run(stopCh)
 
 }

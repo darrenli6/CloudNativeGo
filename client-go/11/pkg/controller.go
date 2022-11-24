@@ -25,26 +25,56 @@ const (
 )
 
 type controller struct {
-	client        kubernetes.Interface
+	// 操作 service ingress
+	client kubernetes.Interface
+	// 获取资源对象的状态，避免跟api server交互
 	ingressLister v1.IngressLister
 	serviceLister coreLister.ServiceLister
-	queue         workqueue.RateLimitingInterface
+	// 限速队列
+	queue workqueue.RateLimitingInterface
 }
 
+func NewController(client kubernetes.Interface, serviceInfomer informer.ServiceInformer, ingressInformer netInformer.IngressInformer) controller {
+
+	c := controller{
+		client:        client,
+		ingressLister: ingressInformer.Lister(),
+		serviceLister: serviceInfomer.Lister(),
+		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ingressManager"),
+	}
+	serviceInfomer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    c.addService,
+		UpdateFunc: c.updateService,
+	})
+
+	ingressInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		DeleteFunc: c.deleteIngress,
+	})
+
+	return c
+
+}
+
+// 都会用到queue
 func (c *controller) addService(obj interface{}) {
+	// 新建一个对象
 	c.enqueue(obj)
 
 }
 
 func (c *controller) updateService(obj interface{}, newobj interface{}) {
 	//todo 比较annotation
+	// 对象一致就不进行处理
 	if reflect.DeepEqual(obj, newobj) {
 		return
 	}
+	// 不一致的进队列
 	c.enqueue(newobj)
 
 }
+
 func (c *controller) enqueue(obj interface{}) {
+	//通过object拿到key
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		runtime.HandleError(err)
@@ -56,10 +86,12 @@ func (c *controller) enqueue(obj interface{}) {
 func (c *controller) deleteIngress(obj interface{}) {
 
 	ingress := obj.(*v12.Ingress)
+
 	ownerReference := v13.GetControllerOf(ingress)
 	if ownerReference == nil {
 		return
 	}
+	// 确定是否是service
 	if ownerReference.Kind != "Service" {
 		return
 	}
@@ -67,14 +99,17 @@ func (c *controller) deleteIngress(obj interface{}) {
 }
 
 func (c *controller) Run(stopCh chan struct{}) {
+	// 消费数据
 	for i := 0; i < workNum; i++ {
+		// 队列
 		go wait.Until(c.worker, time.Minute, stopCh)
 	}
+	// 关闭
 	<-stopCh
 }
 
 func (c *controller) worker() {
-
+	// 不停地获取key 处理循环
 	for c.processNextItem() {
 
 	}
@@ -86,9 +121,11 @@ func (c *controller) processNextItem() bool {
 	if shutdown {
 		return false
 	}
+	// 处理key 完成之后移除
 	defer c.queue.Done(item)
 	key := item.(string)
 
+	// 重试 错误处理
 	err := c.syncService(key)
 	if err != nil {
 		c.handleError(key, err)
@@ -120,7 +157,7 @@ func (c *controller) syncService(key string) error {
 	if err != nil {
 		return err
 	}
-	// 不存在
+	// 有的 ingress/http的话
 	if ok && errors.IsNotFound(err) {
 		// 创建ingress
 		ig := c.contructIngress(namespaceKey, name)
@@ -129,7 +166,7 @@ func (c *controller) syncService(key string) error {
 			return nil
 		}
 	} else if !ok && ingress != nil {
-		// 删除
+		// 删除ingress
 		err := c.client.NetworkingV1().Ingresses(namespaceKey).Delete(context.TODO(), name, v13.DeleteOptions{})
 		if err != nil {
 			return err
@@ -145,6 +182,7 @@ func (c *controller) handleError(key string, err error) {
 		return
 	}
 	runtime.HandleError(err)
+	// 清空key
 	c.queue.Forget(key)
 }
 
@@ -181,25 +219,4 @@ func (c *controller) contructIngress(namespacekey string, name string) *v12.Ingr
 	}
 
 	return &ingress
-}
-
-func NewController(client kubernetes.Interface, serviceInfomer informer.ServiceInformer, ingressInformer netInformer.IngressInformer) controller {
-
-	c := controller{
-		client:        client,
-		ingressLister: ingressInformer.Lister(),
-		serviceLister: serviceInfomer.Lister(),
-		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ingressManager"),
-	}
-	serviceInfomer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    c.addService,
-		UpdateFunc: c.updateService,
-	})
-
-	ingressInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		DeleteFunc: c.deleteIngress,
-	})
-
-	return c
-
 }
