@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"context"
+	v14 "k8s.io/api/core/v1"
 	v12 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v13 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,7 +15,6 @@ import (
 	v1 "k8s.io/client-go/listers/networking/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
-
 	"reflect"
 	"time"
 )
@@ -25,56 +25,25 @@ const (
 )
 
 type controller struct {
-	// 操作 service ingress
-	client kubernetes.Interface
-	// 获取资源对象的状态，避免跟api server交互
+	client        kubernetes.Interface
 	ingressLister v1.IngressLister
 	serviceLister coreLister.ServiceLister
-	// 限速队列
-	queue workqueue.RateLimitingInterface
+	queue         workqueue.RateLimitingInterface
 }
 
-func NewController(client kubernetes.Interface, serviceInfomer informer.ServiceInformer, ingressInformer netInformer.IngressInformer) controller {
-
-	c := controller{
-		client:        client,
-		ingressLister: ingressInformer.Lister(),
-		serviceLister: serviceInfomer.Lister(),
-		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ingressManager"),
-	}
-	serviceInfomer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    c.addService,
-		UpdateFunc: c.updateService,
-	})
-
-	ingressInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		DeleteFunc: c.deleteIngress,
-	})
-
-	return c
-
-}
-
-// 都会用到queue
-func (c *controller) addService(obj interface{}) {
-	// 新建一个对象
-	c.enqueue(obj)
-
-}
-
-func (c *controller) updateService(obj interface{}, newobj interface{}) {
+func (c *controller) updateService(oldObj interface{}, newObj interface{}) {
 	//todo 比较annotation
-	// 对象一致就不进行处理
-	if reflect.DeepEqual(obj, newobj) {
+	if reflect.DeepEqual(oldObj, newObj) {
 		return
 	}
-	// 不一致的进队列
-	c.enqueue(newobj)
+	c.enqueue(newObj)
+}
 
+func (c *controller) addService(obj interface{}) {
+	c.enqueue(obj)
 }
 
 func (c *controller) enqueue(obj interface{}) {
-	//通过object拿到key
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		runtime.HandleError(err)
@@ -84,51 +53,43 @@ func (c *controller) enqueue(obj interface{}) {
 }
 
 func (c *controller) deleteIngress(obj interface{}) {
-
 	ingress := obj.(*v12.Ingress)
-
 	ownerReference := v13.GetControllerOf(ingress)
 	if ownerReference == nil {
 		return
 	}
-	// 确定是否是service
 	if ownerReference.Kind != "Service" {
 		return
 	}
+
 	c.queue.Add(ingress.Namespace + "/" + ingress.Name)
 }
 
 func (c *controller) Run(stopCh chan struct{}) {
-	// 消费数据
 	for i := 0; i < workNum; i++ {
-		// 队列
 		go wait.Until(c.worker, time.Minute, stopCh)
 	}
-	// 关闭
 	<-stopCh
 }
 
 func (c *controller) worker() {
-	// 不停地获取key 处理循环
 	for c.processNextItem() {
 
 	}
 }
 
 func (c *controller) processNextItem() bool {
-
 	item, shutdown := c.queue.Get()
 	if shutdown {
 		return false
 	}
-	// 处理key 完成之后移除
 	defer c.queue.Done(item)
+
 	key := item.(string)
 
-	// 重试 错误处理
 	err := c.syncService(key)
 	if err != nil {
-		c.handleError(key, err)
+		c.handlerError(key, err)
 	}
 	return true
 }
@@ -139,60 +100,63 @@ func (c *controller) syncService(key string) error {
 		return err
 	}
 
-	// 删除
+	//删除
 	service, err := c.serviceLister.Services(namespaceKey).Get(name)
-
 	if errors.IsNotFound(err) {
 		return nil
 	}
-
 	if err != nil {
 		return err
 	}
 
-	// 新增和删除
+	//新增和删除
 	_, ok := service.GetAnnotations()["ingress/http"]
-
 	ingress, err := c.ingressLister.Ingresses(namespaceKey).Get(name)
-	if err != nil {
+	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
-	// 有的 ingress/http的话
+
 	if ok && errors.IsNotFound(err) {
-		// 创建ingress
-		ig := c.contructIngress(namespaceKey, name)
+		//create ingress
+		ig := c.constructIngress(service)
 		_, err := c.client.NetworkingV1().Ingresses(namespaceKey).Create(context.TODO(), ig, v13.CreateOptions{})
 		if err != nil {
-			return nil
+			return err
 		}
 	} else if !ok && ingress != nil {
-		// 删除ingress
+		//delete ingress
 		err := c.client.NetworkingV1().Ingresses(namespaceKey).Delete(context.TODO(), name, v13.DeleteOptions{})
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
-func (c *controller) handleError(key string, err error) {
-
+func (c *controller) handlerError(key string, err error) {
 	if c.queue.NumRequeues(key) <= maxRetry {
 		c.queue.AddRateLimited(key)
 		return
 	}
+
 	runtime.HandleError(err)
-	// 清空key
 	c.queue.Forget(key)
 }
 
-func (c *controller) contructIngress(namespacekey string, name string) *v12.Ingress {
-
+func (c *controller) constructIngress(service *v14.Service) *v12.Ingress {
 	ingress := v12.Ingress{}
-	ingress.Name = name
-	ingress.Namespace = namespacekey
+
+	ingress.ObjectMeta.OwnerReferences = []v13.OwnerReference{
+		*v13.NewControllerRef(service, v14.SchemeGroupVersion.WithKind("Service")),
+	}
+
+	ingress.Name = service.Name
+	ingress.Namespace = service.Namespace
 	pathType := v12.PathTypePrefix
+	icn := "nginx"
 	ingress.Spec = v12.IngressSpec{
+		IngressClassName: &icn,
 		Rules: []v12.IngressRule{
 			{
 				Host: "example.com",
@@ -204,7 +168,7 @@ func (c *controller) contructIngress(namespacekey string, name string) *v12.Ingr
 								PathType: &pathType,
 								Backend: v12.IngressBackend{
 									Service: &v12.IngressServiceBackend{
-										Name: name,
+										Name: service.Name,
 										Port: v12.ServiceBackendPort{
 											Number: 80,
 										},
@@ -219,4 +183,24 @@ func (c *controller) contructIngress(namespacekey string, name string) *v12.Ingr
 	}
 
 	return &ingress
+}
+
+func NewController(client kubernetes.Interface, serviceInformer informer.ServiceInformer, ingressInformer netInformer.IngressInformer) controller {
+	c := controller{
+		client:        client,
+		ingressLister: ingressInformer.Lister(),
+		serviceLister: serviceInformer.Lister(),
+		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ingressManager"),
+	}
+
+	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    c.addService,
+		UpdateFunc: c.updateService,
+	})
+
+	ingressInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		DeleteFunc: c.deleteIngress,
+	})
+
+	return c
 }

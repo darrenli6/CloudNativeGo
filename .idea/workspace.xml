@@ -5,13 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e7b3c9a6-2be3-4716-b192-7e569e791c9d" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/module5/docs/README.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/module5/docs/x509.MD" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client-go/client-go-workerqueue-controller/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/client-go/client-go-workerqueue-controller/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/client-go/client-go-workerqueue-controller/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/client-go/client-go-workerqueue-controller/main.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -25,7 +19,7 @@
     <option name="testRunner" value="GRADLE" />
     <option name="delegatedBuild" value="true" />
   </component>
-  <component name="GOROOT" url="file:///usr/local/go" />
+  <component name="GOROOT" url="file://$PROJECT_DIR$/../../../../../../local/go" />
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
@@ -52,7 +46,7 @@
     "WebServerToolWindowFactoryState": "false",
     "go.import.settings.migrated": "true",
     "go.sdk.automatically.set": "true",
-    "last_opened_file_path": "/Users/darren/go/src/github.com/darrenli6/CloudNativeGo/module5/docs",
+    "last_opened_file_path": "/root",
     "nodejs_package_manager_path": "npm"
   }
 }]]></component>
@@ -90,7 +84,11 @@
     </option>
   </component>
   <component name="VgoProject">
-    <integration-enabled>false</integration-enabled>
+    <environment>
+      <map>
+        <entry key="GOPROXY" value="https://goproxy.io" />
+      </map>
+    </environment>
     <settings-migrated>true</settings-migrated>
   </component>
   <component name="XDebuggerManager">
