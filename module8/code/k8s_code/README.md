@@ -1,3 +1,15 @@
+# homework
+除了将 httpServer 应用优雅的运行在 Kubernetes 之上，我们还应该考虑如何将服务发布给对内和对外的调用方。
+来尝试用 Service, Ingress 将你的服务发布给集群外部的调用方吧。
+在第一部分的基础上提供更加完备的部署 spec，包括（不限于）：
+
+Service
+Ingress
+可以考虑的细节
+
+如何确保整个应用的高可用。
+如何通过证书保证 httpServer 的通讯安全。
+
 ## 创建service 
 
 ```
@@ -30,6 +42,26 @@ main-ing-svc       NodePort    10.107.193.1    <none>        8083:30993/TCP   11
 宿主机访问 ：http://127.0.0.1:30993/healthz
 
 
+## 执行ingress控制器
+
+```
+kubectl create -f nginx-ingress-deployment.yaml
+```
+
+## 生成key-cert
+```
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=darrenli.com/O=darren" -addext "subjectAltName = DNS:darrenli.com"
+```
+
+- 创建secret 
+```
+kubectl create secret tls darrenli-tls --cert=./tls.crt --key=./tls.key
+
+```
+
+
+
+
 ## 创建ingress
 
 ```
@@ -41,6 +73,10 @@ metadata:
     kubernetes.io/ingress.class: "nginx"   
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
+  tls:
+    - hosts:
+        - darrenli.com
+      secretName: darrenli-tls  
   rules:
   - http:
       paths:       
@@ -59,6 +95,14 @@ darren@darrendeMacBook-Pro k8s_code % kubectl get ingress -owide
 NAME                CLASS    HOSTS   ADDRESS   PORTS   AGE
 main-ingress-test   <none>   *                 80      14s
 ```
+
+
+
+### 安全
+
+  
+curl -H "Host: darrenli6.com" https://10.99.10.182 -v -k
+
 
 
 ### 高可用

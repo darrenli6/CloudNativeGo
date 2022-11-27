@@ -6,6 +6,10 @@ metadata:
     kubernetes.io/ingress.class: "nginx"   
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
+  tls:
+    - hosts:
+        - darrenli.com
+      secretName: darrenli-tls  
   rules:
   - http:
       paths:       
